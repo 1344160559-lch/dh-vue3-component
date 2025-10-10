@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue 3 输入框效果</title>
+    <script src="https://unpkg.com/vue@3.2.31/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            outline: none;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(200deg, #0c3483, #a2b6df);
+        }
+        
+        .wrapper {
+            width: 450px;
+            background-color: #fff;
+            padding: 40px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+        }
+        
+        .input-container {
+            position: relative;
+            width: 100%;
+            height: 50px;
+            margin-bottom: 25px;
+        }
+        
+        .input-container input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            font-size: 16px;
+            border-bottom: 2px solid #c0c0c0;
+            padding-top: 15px;
+            background-color: transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .input-container input:focus {
+            border-bottom-color: transparent;
+        }
+        
+        .input-container label {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            color: #808080;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        
+        .input-container .underline {
+            position: absolute;
+            bottom: 0;
+            height: 2px;
+            width: 100%;
+            background-color: #2c6fdb;
+            transform: scaleX(0);
+            transition: all 0.3s ease;
+        }
+        
+        .input-container input:focus ~ label,
+        .input-container input:not(:placeholder-shown) ~ label {
+            transform: translateY(-25px);
+            font-size: 14px;
+            color: #2c6fdb;
+        }
+        
+        .input-container input:focus ~ .underline,
+        .input-container input:not(:placeholder-shown) ~ .underline {
+            transform: scaleX(1);
+        }
+        
+        .input-container .hint {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            font-size: 12px;
+            color: #666;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .input-container input:focus ~ .hint {
+            opacity: 1;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #2c6fdb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            background-color: #1a5bbf;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="wrapper">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">用户信息</h2>
+            
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    v-model="form.name" 
+                    @focus="activeField = 'name'"
+                    @blur="activeField = null"
+                    placeholder=" "
+                    required
+                >
+                <label>您的姓名</label>
+                <div class="underline"></div>
+                <span class="hint">请输入您的真实姓名</span>
+            </div>
+            
+            <div class="input-container">
+                <input 
+                    type="email" 
+                    v-model="form.email" 
+                    @focus="activeField = 'email'"
+                    @blur="activeField = null"
+                    placeholder=" "
+                    required
+                >
+                <label>电子邮箱</label>
+                <div class="underline"></div>
+                <span class="hint">请输入有效的邮箱地址</span>
+            </div>
+            
+            <div class="input-container">
+                <input 
+                    type="password" 
+                    v-model="form.password" 
+                    @focus="activeField = 'password'"
+                    @blur="activeField = null"
+                    placeholder=" "
+                    required
+                >
+                <label>设置密码</label>
+                <div class="underline"></div>
+                <span class="hint">至少8个字符，包含字母和数字</span>
+            </div>
+            
+            <button class="submit-btn" @click="submitForm">提交信息</button>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+        
+        createApp({
+            setup() {
+                const form = ref({
+                    name: '',
+                    email: '',
+                    password: ''
+                });
+                
+                const activeField = ref(null);
+                
+                const submitForm = () => {
+                    if (!form.value.name || !form.value.email || !form.value.password) {
+                        alert('请填写所有必填字段');
+                        return;
+                    }
+                    
+                    if (!validateEmail(form.value.email)) {
+                        alert('请输入有效的邮箱地址');
+                        return;
+                    }
+                    
+                    if (form.value.password.length < 8) {
+                        alert('密码长度至少为8个字符');
+                        return;
+                    }
+                    
+                    alert(`提交成功！\n姓名: ${form.value.name}\n邮箱: ${form.value.email}`);
+                };
+                
+                const validateEmail = (email) => {
+                    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    return re.test(email);
+                };
+                
+                return {
+                    form,
+                    activeField,
+                    submitForm
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

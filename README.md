@@ -14,8 +14,16 @@
 
 ### 2. vue3+canvas图片添加水印（对应文件夹 CanvasWatermark）
 
+公众号文章地址：https://mp.weixin.qq.com/s/dkpjN40I-nF3GEvF068duA
+
 ![alt text](./images/canvasWatermark.png)
 
 ### 3. vue3全局loading实现（对应文件夹 GlobalLoading）
 
+公众号文章地址：https://mp.weixin.qq.com/s/OMb6P8xPt7b2ULuCUEs_Bg
+
 ![alt text](./images/globalLoading.gif)
+
+### 4. Vue3弹性标签导航组件（对应文件夹 ElasticTabs）
+
+![alt text](./images/ElasticTabs.gif)

@@ -27,3 +27,11 @@
 ### 4. Vue3弹性标签导航组件（对应文件夹 ElasticTabs）
 
 ![alt text](./images/ElasticTabs.gif)
+
+### 5. Vue3旋转菜单组件（对应文件夹 CircularMenu）
+
+![alt text](./images/CircularMenu.gif)
+
+### 6. js音频可视化效果（对应文件夹 AudioVisualization）
+
+![alt text](./images/AudioVisualization.gif)

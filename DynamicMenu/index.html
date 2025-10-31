@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue + Element Plus 动态菜单</title>
+  <!-- 引入 Element Plus 样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <!-- 引入 Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 引入 Element Plus -->
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- 引入图标 -->
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .sidebar {
+      width: 240px;
+      background-color: #001529;
+      transition: width 0.3s;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .sidebar.collapsed {
+      width: 64px;
+    }
+    
+    .logo-area {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid #031529;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .sidebar.collapsed .logo-text {
+      opacity: 0;
+    }
+    
+    .el-menu-vertical {
+      border-right: none !important;
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .header {
+      height: 60px;
+      background-color: white;
+      box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      margin-right: 20px;
+    }
+    
+    .content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .page-content {
+      background-color: white;
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+      min-height: 500px;
+    }
+    
+    .menu-demo {
+      margin-top: 30px;
+      border: 1px solid #e6e6e6;
+      border-radius: 4px;
+      padding: 20px;
+      color: #606266;
+    }
+    .menu-demo h3{
+      margin-bottom: 15px;
+    }
+    .menu-demo p{
+      margin-bottom: 15px;
+    }
+    
+    .demo-title {
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #303133;
+      border-bottom: 1px solid #e6e6e6;
+      padding-bottom: 10px;
+    }
+    
+    .demo-section {
+      margin-bottom: 30px;
+    }
+    
+    .demo-section h3 {
+      margin-bottom: 15px;
+      color: #606266;
+    }
+    
+    .role-badge {
+      margin-left: 10px;
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #909399;
+      border-top: 1px solid #e6e6e6;
+      background-color: white;
+      flex-shrink: 0;
+    }
+    
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .el-dropdown-link {
+      cursor: pointer;
+      color: #409EFF;
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-container">
+      <!-- 侧边栏菜单 -->
+      <div class="sidebar" :class="{ collapsed: isCollapse }">
+        <div class="logo-area">
+          <span class="logo-text">大华 Vue Admin</span>
+        </div>
+        
+        <el-menu
+          :default-active="activeMenu"
+          class="el-menu-vertical"
+          background-color="#001529"
+          text-color="#bfcbd9"
+          active-text-color="#409EFF"
+          :collapse="isCollapse"
+          :collapse-transition="false"
+          :unique-opened="true"
+        >
+          <template v-for="item in filteredMenu" :key="item.id">
+            <!-- 有子菜单的情况 -->
+            <el-sub-menu v-if="item.children && item.children.length" :index="item.id">
+              <template #title>
+                <el-icon>
+                  <component :is="item.icon" />
+                </el-icon>
+                <span>{{ item.name }}</span>
+                <el-tag v-if="item.badge" size="small" type="danger" class="role-badge">{{ item.badge }}</el-tag>
+              </template>
+              
+              <el-menu-item 
+                v-for="child in item.children" 
+                :key="child.id" 
+                :index="child.route"
+                @click="selectMenu(child)"
+              >
+                <template #title>
+                  <span>{{ child.name }}</span>
+                  <el-tag v-if="child.roles.length === 1" size="small" effect="plain" class="role-badge">
+                    {{ child.roles[0] }}
+                  </el-tag>
+                </template>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <!-- 没有子菜单的情况 -->
+            <el-menu-item 
+              v-else 
+              :index="item.route"
+              @click="selectMenu(item)"
+            >
+              <el-icon>
+                <component :is="item.icon" />
+              </el-icon>
+              <template #title>
+                <span>{{ item.name }}</span>
+                <el-tag v-if="item.badge" size="small" type="danger" class="role-badge">{{ item.badge }}</el-tag>
+              </template>
+            </el-menu-item>
+          </template>
+        </el-menu>
+      </div>
+      
+      <!-- 主内容区 -->
+      <div class="main-content">
+        <div class="header">
+          <div class="header-left">
+            <el-button 
+              :icon="isCollapse ? Expand : Fold" 
+              @click="toggleSidebar" 
+              text 
+              size="small"
+            ></el-button>
+            <el-breadcrumb separator="/" style="margin-left: 20px;">
+              <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+              <el-breadcrumb-item>{{ currentPageTitle }}</el-breadcrumb-item>
+            </el-breadcrumb>
+          </div>
+          
+          <div class="header-right">
+            <div class="user-info">
+              <el-avatar :size="32" :src="currentUser.avatar" style="margin-right: 10px;"></el-avatar>
+              <span>{{ currentUser.name }}</span>
+            </div>
+            
+            <el-dropdown @command="handleRoleChange">
+              <span class="el-dropdown-link">
+                角色: {{ currentUser.role }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="admin">管理员</el-dropdown-item>
+                  <el-dropdown-item command="editor">编辑者</el-dropdown-item>
+                  <el-dropdown-item command="viewer">查看者</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+        
+        <div class="content">
+          <div class="page-content">
+            <h1 class="demo-title">{{ currentPageTitle }}</h1>
+            
+            <el-alert
+              title="动态菜单功能说明"
+              type="info"
+              description="此演示展示了基于Element Plus的Vue动态菜单实现，支持根据用户角色动态显示菜单项，支持多级菜单和路由集成。"
+              show-icon
+              :closable="false"
+              style="margin-bottom: 20px;"
+            ></el-alert>
+            
+            <div class="demo-section">
+              <h3>当前用户信息</h3>
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="用户名">{{ currentUser.name }}</el-descriptions-item>
+                <el-descriptions-item label="角色">
+                  <el-tag :type="currentUser.role === 'admin' ? 'danger' : (currentUser.role === 'editor' ? 'warning' : 'success')">
+                    {{ currentUser.role }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="可访问菜单数量">{{ filteredMenu.length }} 个主菜单</el-descriptions-item>
+                <el-descriptions-item label="当前页面">{{ currentPageTitle }}</el-descriptions-item>
+              </el-descriptions>
+            </div>
+            
+            <div class="demo-section">
+              <h3>菜单权限说明</h3>
+              <el-table :data="rolePermissions" style="width: 100%">
+                <el-table-column prop="role" label="角色" width="120">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.role === 'admin' ? 'danger' : (scope.row.role === 'editor' ? 'warning' : 'success')">
+                      {{ scope.row.role }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="permissions" label="权限说明"></el-table-column>
+              </el-table>
+            </div>
+            
+            <div class="menu-demo">
+              <h3>菜单数据演示</h3>
+              <p>以下展示了完整的菜单数据结构，以及根据当前角色过滤后的菜单：</p>
+              
+              <el-tabs v-model="activeTab" type="border-card">
+                <el-tab-pane label="完整菜单数据" name="full">
+                  <pre>{{ JSON.stringify(menuData, null, 2) }}</pre>
+                </el-tab-pane>
+                <el-tab-pane label="过滤后菜单" name="filtered">
+                  <pre>{{ JSON.stringify(filteredMenu, null, 2) }}</pre>
+                </el-tab-pane>
+              </el-tabs>
+            </div>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>Vue + Element Plus 动态菜单实现示例 &copy; 2023</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+    
+    const app = createApp({
+      setup() {
+        // 图标引用
+        const icons = ElementPlusIconsVue;
+        
+        // 响应式数据
+        const isCollapse = ref(false);
+        const activeMenu = ref('/dashboard');
+        const currentPageTitle = ref('仪表板');
+        const activeTab = ref('full');
+        
+        // 当前用户信息
+        const currentUser = ref({
+          name: '管理员',
+          role: 'admin',
+          avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+        });
+        
+        // 完整的菜单数据
+        const menuData = ref([
+          {
+            id: 'dashboard',
+            name: '仪表板',
+            icon: 'DataBoard',
+            route: '/dashboard',
+            roles: ['admin', 'editor', 'viewer']
+          },
+          {
+            id: 'content',
+            name: '内容管理',
+            icon: 'Document',
+            roles: ['admin', 'editor'],
+            children: [
+              {
+                id: 'articles',
+                name: '文章管理',
+                route: '/articles',
+                roles: ['admin', 'editor']
+              },
+              {
+                id: 'categories',
+                name: '分类管理',
+                route: '/categories',
+                roles: ['admin']
+              },
+              {
+                id: 'tags',
+                name: '标签管理',
+                route: '/tags',
+                roles: ['admin', 'editor']
+              }
+            ]
+          },
+          {
+            id: 'users',
+            name: '用户管理',
+            icon: 'User',
+            route: '/users',
+            roles: ['admin']
+          },
+          {
+            id: 'system',
+            name: '系统设置',
+            icon: 'Setting',
+            roles: ['admin'],
+            children: [
+              {
+                id: 'settings',
+                name: '基本设置',
+                route: '/settings',
+                roles: ['admin']
+              },
+              {
+                id: 'logs',
+                name: '系统日志',
+                route: '/logs',
+                roles: ['admin']
+              },
+              {
+                id: 'backup',
+                name: '数据备份',
+                route: '/backup',
+                roles: ['admin']
+              }
+            ]
+          },
+          {
+            id: 'analytics',
+            name: '统计分析',
+            icon: 'TrendCharts',
+            badge: 'New',
+            route: '/analytics',
+            roles: ['admin', 'editor']
+          }
+        ]);
+        
+        // 角色权限说明
+        const rolePermissions = ref([
+          {
+            role: 'admin',
+            permissions: '拥有所有菜单权限，包括系统设置和用户管理'
+          },
+          {
+            role: 'editor',
+            permissions: '可以访问内容管理和统计分析，但不能访问系统设置和用户管理'
+          },
+          {
+            role: 'viewer',
+            permissions: '只能访问仪表板，具有只读权限'
+          }
+        ]);
+        
+        // 根据用户角色过滤菜单
+        const filteredMenu = computed(() => {
+          return menuData.value
+            .map(item => {
+              // 检查主菜单项权限
+              if (!item.roles.includes(currentUser.value.role)) {
+                return null;
+              }
+              
+              // 深拷贝菜单项，避免修改原始数据
+              const menuItem = { ...item };
+              
+              // 如果有子菜单，过滤子菜单
+              if (menuItem.children) {
+                menuItem.children = menuItem.children.filter(
+                  child => child.roles.includes(currentUser.value.role)
+                );
+                
+                // 如果过滤后子菜单为空，则返回null
+                if (menuItem.children.length === 0) {
+                  return null;
+                }
+              }
+              
+              return menuItem;
+            })
+            .filter(Boolean); // 过滤掉null值
+        });
+        
+        // 选择菜单项
+        const selectMenu = (item) => {
+          activeMenu.value = item.route;
+          currentPageTitle.value = item.name;
+          ElMessage.success(`切换到: ${item.name}`);
+          
+          // 在实际项目中，这里会使用Vue Router进行路由跳转
+          // this.$router.push(item.route);
+        };
+        
+        // 切换侧边栏折叠状态
+        const toggleSidebar = () => {
+          isCollapse.value = !isCollapse.value;
+        };
+        
+        // 处理角色变更
+        const handleRoleChange = (role) => {
+          currentUser.value.role = role;
+          
+          // 根据角色更新当前激活菜单
+          if (role === 'viewer') {
+            activeMenu.value = '/dashboard';
+            currentPageTitle.value = '仪表板';
+          } else {
+            // 尝试找到第一个可访问的菜单
+            const firstAccessibleMenu = findFirstAccessibleMenu();
+            if (firstAccessibleMenu) {
+              activeMenu.value = firstAccessibleMenu.route;
+              currentPageTitle.value = firstAccessibleMenu.name;
+            }
+          }
+          
+          ElMessage.success(`角色已切换为: ${role}`);
+        };
+        
+        // 查找第一个可访问的菜单项
+        const findFirstAccessibleMenu = () => {
+          for (const menu of filteredMenu.value) {
+            if (menu.route) {
+              return menu;
+            }
+            if (menu.children && menu.children.length > 0) {
+              return menu.children[0];
+            }
+          }
+          return null;
+        };
+        
+        // 初始化
+        onMounted(() => {
+          // 设置默认激活菜单
+          activeMenu.value = '/dashboard';
+          currentPageTitle.value = '仪表板';
+        });
+        
+        return {
+          // 图标
+          ...icons,
+          
+          // 响应式数据
+          isCollapse,
+          activeMenu,
+          currentPageTitle,
+          activeTab,
+          currentUser,
+          menuData,
+          rolePermissions,
+          filteredMenu,
+          
+          // 方法
+          toggleSidebar,
+          selectMenu,
+          handleRoleChange
+        };
+      }
+    });
+    
+    // 注册所有图标
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component);
+    }
+    
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

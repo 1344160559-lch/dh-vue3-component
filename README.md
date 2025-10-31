@@ -46,7 +46,7 @@
 
 ### 7. vue3 图片懒加载（对应文件夹 LazyImages）
 
-![alt text](./images/LazyImages.png)
+![alt text](./images/LazyImages.gif)
 
 ### 8. vue3 + Element Plus动态菜单（对应文件夹 DynamicMenu）
 

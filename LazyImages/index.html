@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue3 图片懒加载</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      line-height: 1.6;
+      color: #333;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 20px;
+    }
+    
+    h2 {
+      font-size: 2rem;
+      color: #2c3e50;
+    }
+    
+    .subtitle {
+      font-size: 1.2rem;
+      color: #7f8c8d;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+    
+    .image-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .image-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .lazy-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.5s ease;
+    }
+    
+    .image-placeholder {
+      width: 100%;
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      color: #6c757d;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .image-info {
+      padding: 15px;
+    }
+    
+    .image-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    
+    .image-description {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+    }
+    
+    .error-message {
+      color: #e74c3c;
+      font-weight: 500;
+      text-align: center;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #2980b9;
+    }
+    
+    button.secondary {
+      background: #95a5a6;
+    }
+    
+    button.secondary:hover {
+      background: #7f8c8d;
+    }
+    
+    .stats {
+      text-align: center;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      margin-top: 20px;
+    }
+    
+    .stats p {
+      margin: 5px 0;
+      font-size: 1.1rem;
+    }
+    
+    .highlight {
+      color: #3498db;
+      font-weight: 600;
+    }
+    
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      color: #7f8c8d;
+      border-top: 1px solid #eee;
+    }
+    
+    @media (max-width: 768px) {
+      .gallery {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      button {
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <header>
+        <h2>Vue3 图片懒加载</h2>
+      </header>
+      
+      <div class="controls">
+        <button @click="addImages">添加更多图片</button>
+        <button @click="resetImages" class="secondary">重置图片</button>
+        <button @click="toggleLoading">模拟网络: {{ networkSlow ? '慢速' : '正常' }}</button>
+      </div>
+      
+      <div class="gallery">
+        <div 
+          v-for="(image, index) in images" 
+          :key="index" 
+          class="image-card"
+        >
+          <lazy-image
+            :src="image.url"
+            :alt="image.title"
+            :slow-load="networkSlow"
+            @loaded="onImageLoaded"
+            @error="onImageError"
+          ></lazy-image>
+          <div class="image-info">
+            <div class="image-title">{{ image.title }}</div>
+            <div class="image-description">{{ image.description }}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="stats">
+        <p>已加载图片: <span class="highlight">{{ loadedCount }}</span> / {{ images.length }}</p>
+        <p>加载失败: <span class="highlight">{{ errorCount }}</span></p>
+        <p>总图片数: <span class="highlight">{{ images.length }}</span></p>
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted, onUnmounted } = Vue;
+    
+    // 使用可靠的图片源 - 来自Picsum的占位图片
+    const imageUrls = [
+      'https://picsum.photos/id/10/400/300',
+      'https://picsum.photos/id/11/400/300',
+      'https://picsum.photos/id/12/400/300',
+      'https://picsum.photos/id/13/400/300',
+      'https://picsum.photos/id/14/400/300',
+      'https://picsum.photos/id/15/400/300',
+      'https://picsum.photos/id/16/400/300',
+      'https://picsum.photos/id/17/400/300',
+      'https://picsum.photos/id/18/400/300',
+      'https://picsum.photos/id/19/400/300',
+      'https://picsum.photos/id/20/400/300',
+      'https://picsum.photos/id/21/400/300'
+    ];
+    
+    // 懒加载图片组件
+    const LazyImage = {
+      props: {
+        src: String,
+        alt: String,
+        slowLoad: Boolean
+      },
+      emits: ['loaded', 'error'],
+      template: `
+        <div class="lazy-image-container" ref="container">
+          <img
+            v-if="isLoaded && !hasError"
+            :src="actualSrc"
+            :alt="alt"
+            class="lazy-image"
+            :style="{ opacity: imageOpacity }"
+            @load="onLoad"
+            @error="onError"
+          />
+          <div v-else-if="hasError" class="image-placeholder">
+            <div class="error-message">图片加载失败</div>
+            <button @click="retryLoad" style="margin-top: 10px;">重试</button>
+          </div>
+          <div v-else class="image-placeholder">
+            <div class="spinner"></div>
+            <div>加载中...</div>
+          </div>
+        </div>
+      `,
+      setup(props, { emit }) {
+        const isLoaded = ref(false);
+        const hasError = ref(false);
+        const imageOpacity = ref(0);
+        const observer = ref(null);
+        const container = ref(null);
+        const actualSrc = ref('');
+        
+        const loadImage = () => {
+          if (props.slowLoad) {
+            // 模拟慢速网络
+            setTimeout(() => {
+              actualSrc.value = props.src;
+              isLoaded.value = true;
+            }, 2000);
+          } else {
+            actualSrc.value = props.src;
+            isLoaded.value = true;
+          }
+        };
+        
+        const onLoad = () => {
+          // 图片加载完成后淡入
+          setTimeout(() => {
+            imageOpacity.value = 1;
+          }, 50);
+          emit('loaded');
+        };
+        
+        const onError = () => {
+          hasError.value = true;
+          emit('error');
+        };
+        
+        const retryLoad = () => {
+          hasError.value = false;
+          isLoaded.value = false;
+          // 重新触发观察
+          if (observer.value && container.value) {
+            observer.value.observe(container.value);
+          }
+        };
+        
+        onMounted(() => {
+          // 创建Intersection Observer
+          observer.value = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                loadImage();
+                observer.value.unobserve(entry.target);
+              }
+            });
+          }, {
+            rootMargin: '50px 0px', // 提前50px开始加载
+            threshold: 0.1
+          });
+          
+          // 开始观察
+          if (container.value) {
+            observer.value.observe(container.value);
+          }
+        });
+        
+        onUnmounted(() => {
+          if (observer.value) {
+            observer.value.disconnect();
+          }
+        });
+        
+        return {
+          isLoaded,
+          hasError,
+          imageOpacity,
+          container,
+          actualSrc,
+          onLoad,
+          onError,
+          retryLoad
+        };
+      }
+    };
+    
+    // 主应用
+    const app = createApp({
+      components: {
+        LazyImage
+      },
+      setup() {
+        const images = ref([
+          {
+            url: imageUrls[0],
+            title: '山脉风光',
+            description: '壮丽的山脉与蓝天白云'
+          },
+          {
+            url: imageUrls[1],
+            title: '海滩日落',
+            description: '金色阳光洒在海面上'
+          },
+          {
+            url: imageUrls[2],
+            title: '森林小径',
+            description: '宁静的森林小径'
+          },
+          {
+            url: imageUrls[3],
+            title: '城市夜景',
+            description: '灯火辉煌的城市夜景'
+          },
+          {
+            url: imageUrls[4],
+            title: '湖泊倒影',
+            description: '平静湖面映出山影'
+          },
+          {
+            url: imageUrls[5],
+            title: '沙漠景观',
+            description: '广袤无垠的沙漠'
+          }
+        ]);
+        
+        const loadedCount = ref(0);
+        const errorCount = ref(0);
+        const networkSlow = ref(false);
+        let imageIndex = 6;
+        
+        const addImages = () => {
+          if (imageIndex < imageUrls.length) {
+            images.value.push(
+              {
+                url: imageUrls[imageIndex],
+                title: `新增图片 ${imageIndex - 5}`,
+                description: '这是通过"添加更多图片"按钮加载的图片'
+              }
+            );
+            imageIndex++;
+            
+            if (imageIndex < imageUrls.length) {
+              images.value.push(
+                {
+                  url: imageUrls[imageIndex],
+                  title: `新增图片 ${imageIndex - 5}`,
+                  description: '这是通过"添加更多图片"按钮加载的图片'
+                }
+              );
+              imageIndex++;
+            }
+          } else {
+            alert('所有图片已加载完毕！');
+          }
+        };
+        
+        const resetImages = () => {
+          images.value = [
+            {
+              url: imageUrls[0],
+              title: '山脉风光',
+              description: '壮丽的山脉与蓝天白云'
+            },
+            {
+              url: imageUrls[1],
+              title: '海滩日落',
+              description: '金色阳光洒在海面上'
+            },
+            {
+              url: imageUrls[2],
+              title: '森林小径',
+              description: '宁静的森林小径'
+            }
+          ];
+          loadedCount.value = 0;
+          errorCount.value = 0;
+          imageIndex = 3;
+        };
+        
+        const toggleLoading = () => {
+          networkSlow.value = !networkSlow.value;
+        };
+        
+        const onImageLoaded = () => {
+          loadedCount.value++;
+        };
+        
+        const onImageError = () => {
+          errorCount.value++;
+        };
+        
+        return {
+          images,
+          loadedCount,
+          errorCount,
+          networkSlow,
+          addImages,
+          resetImages,
+          toggleLoading,
+          onImageLoaded,
+          onImageError
+        };
+      }
+    });
+    
+    app.component('LazyImage', LazyImage);
+    app.mount('#app');
+  </script>
+</body>
+</html>

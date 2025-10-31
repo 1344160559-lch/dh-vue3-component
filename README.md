@@ -44,6 +44,10 @@
 
 ![alt text](./images/AudioVisualization.gif)
 
-### 7. vue3 + Element Plus动态菜单（对应文件夹 DynamicMenu）
+### 7. vue3 图片懒加载（对应文件夹 LazyImages）
+
+![alt text](./images/LazyImages.png)
+
+### 8. vue3 + Element Plus动态菜单（对应文件夹 DynamicMenu）
 
 ![alt text](./images/DynamicMenu.png)
